@@ -53,7 +53,7 @@ _find_local_monitor_python() {
     done
 
     echo "Error: No local python3 with psutil found." >&2
-    echo "  Run: $SCRIPT_DIR/../../../engine/tools/devContainer/scripts/setup_monitor.sh" >&2
+    echo "  Run: $SCRIPT_DIR/../../../../tools/devContainer/scripts/setup_monitor.sh" >&2
     return 1
 }
 
@@ -79,7 +79,7 @@ COMPARE_MODE=false
 COMPARE_DIRS=()
 CHART_FORMAT="png"
 MANAGER_LOG="/var/wazuh-manager/logs/wazuh-manager.log"
-GRAPHICS_PY="$SCRIPT_DIR/../../../engine/tools/devContainer/scripts/monitor_graphics_generator.py"
+GRAPHICS_PY="$SCRIPT_DIR/../../../../tools/devContainer/scripts/monitor_graphics_generator.py"
 # Remote mode (SSH) settings — activated when MANAGER != 127.0.0.1
 SSH_KEY=""
 SSH_PORT=22
@@ -233,7 +233,7 @@ fi
 
 REMOTE_MONITOR_DIR="/tmp/wazuh_bench_monitor"
 SSH_SOCKET="/tmp/wazuh_bench_ssh_$$"
-MONITOR_PY="$SCRIPT_DIR/../../../engine/tools/devContainer/scripts/monitor.py"
+MONITOR_PY="$SCRIPT_DIR/../../../../tools/devContainer/scripts/monitor.py"
 
 _build_ssh_opts() {
     SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o "Port=$SSH_PORT")
@@ -308,7 +308,7 @@ if $REMOTE_MODE; then
     else
         echo "Error: psutil not available on remote host $MANAGER"
         echo "  Run setup_monitor.sh on the remote host:"
-        echo "    curl -fsSL https://raw.githubusercontent.com/wazuh/wazuh/<branch>/src/engine/tools/devContainer/scripts/setup_monitor.sh | sudo bash"
+        echo "    curl -fsSL https://raw.githubusercontent.com/wazuh/wazuh/<branch>/tools/devContainer/scripts/setup_monitor.sh | sudo bash"
         exit 1
     fi
 
@@ -484,7 +484,7 @@ if $REMOTE_MODE; then
     echo "  Remote monitor PID (local SSH): $MONITOR_BG_PID"
     echo "  Remote output: $REMOTE_OUTPUT_DIR/"
 else
-    echo "Starting resource monitor (engine/tools/devContainer/scripts/monitor.py)..."
+    echo "Starting resource monitor (tools/devContainer/scripts/monitor.py)..."
     MONITOR_ARGS=(
         --output-dir "$MONITOR_DIR"
         -s 1.0

@@ -95,7 +95,7 @@ else
     done
     if [[ -z "${PYTHON:-}" ]]; then
         echo "Error: No python3 with psutil found." >&2
-        echo "  Run: $(dirname "${BASH_SOURCE[0]}")/../../../engine/tools/devContainer/scripts/setup_monitor.sh" >&2
+        echo "  Run: $(dirname "${BASH_SOURCE[0]}")/../../../../tools/devContainer/scripts/setup_monitor.sh" >&2
         exit 1
     fi
 fi
@@ -174,7 +174,7 @@ trap cleanup EXIT
 trap request_stop INT TERM
 
 # 1. Start resource monitor.
-MONITOR_PY="$SCRIPT_DIR/../../../engine/tools/devContainer/scripts/monitor.py"
+MONITOR_PY="$SCRIPT_DIR/../../../../tools/devContainer/scripts/monitor.py"
 echo "Starting resource monitor..."
 MONITOR_ARGS=(
     --output-dir "$MONITOR_DIR"
@@ -291,7 +291,7 @@ PYMERGE
 # That generator does auto-discovery of per-process CSVs, reads
 # disk_usage.csv directly, and parses logs.csv / invsync_queue_stats.csv /
 # invsync_session_stats.csv from $MONITOR_DIR.
-ENGINE_GFX="$SCRIPT_DIR/../../../engine/tools/devContainer/scripts/monitor_graphics_generator.py"
+ENGINE_GFX="$SCRIPT_DIR/../../../../tools/devContainer/scripts/monitor_graphics_generator.py"
 if [[ ! -f "$ENGINE_GFX" ]]; then
     echo "warning: engine monitor_graphics_generator.py not found at $ENGINE_GFX" >&2
     echo "         falling back to benchmark/graphics_generator.py"
