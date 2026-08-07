@@ -34,6 +34,7 @@ static SERVICE_STATUS_HANDLE   ossecServiceStatusHandle;
 void WINAPI OssecServiceStart (DWORD argc, LPTSTR *argv);
 void wm_kill_children();
 extern void stop_wmodules();
+extern void fim_sync_teardown();
 
 /* Start OSSEC-HIDS service */
 int os_start_service()
@@ -291,6 +292,11 @@ VOID WINAPI OssecServiceCtrlHandler(DWORD dwOpcode)
                 wm_kill_children();
                 stop_wmodules();
                 is_fim_shutdown = true;
+                /* Close the FIM synchronization database before reporting SERVICE_STOPPED: its
+                 * connection was only released by the static destructors during the process
+                 * unwind, which runs after the SCM has been told we stopped, so an uninstall
+                 * deleted the installation while fim_sync.db was still open (issue #38212). */
+                fim_sync_teardown();
                 fim_db_teardown();
 #endif
                 ossecServiceStatus.dwCurrentState           = SERVICE_STOPPED;

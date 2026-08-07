@@ -75,6 +75,18 @@ bool fim_sync_thread_initialized = false;
 int fim_sync_exit_pipe[2] = {-1, -1};
 #endif
 
+#ifdef WIN32
+// Handle to the FIM inventory synchronization thread. Kept so the Windows service stop path
+// (fim_sync_teardown(), called from OssecServiceCtrlHandler()) can wait for the thread to exit
+// before destroying the sync protocol handle: its SQLite connection to fim_sync.db has to be
+// closed before the SCM is told the service stopped, or an uninstall deletes the installation
+// while fim_sync.db and its -wal/-shm are still open (issue #38212).
+static HANDLE fim_sync_thread_handle = NULL;
+static bool fim_sync_thread_initialized = false;
+
+#define FIM_SYNC_EXIT_TIMEOUT_MS 20000
+#endif
+
 // Serializes syscheck.sync_handle use against the shutdown teardown (issue #37334): the
 // users that are not joined before asp_destroy() (event persistence, syscom's fim_sync
 // responses, the DataClean paths and the scheduled-scan asp_reset) take it for reading
@@ -112,6 +124,61 @@ STATIC void fim_link_reload_broken_link(char *path, directory_t *configuration);
 #endif
 
 bool is_fim_shutdown = false;
+
+#ifdef WIN32
+/**
+ * @brief Stop the FIM inventory synchronization and close its database, for the Windows stop path.
+ *
+ * Same teardown fim_shutdown_waiter() (main.c) performs on POSIX, which Windows never had: the
+ * agent runs FIM inside wazuh-agent.exe, so there is no syscheckd main() to run it. Without it the
+ * connection to fim_sync.db is only released by the static destructors during the process unwind,
+ * which happens after the SCM has been told the service stopped (issue #38212).
+ */
+void fim_sync_teardown() {
+    HANDLE sync_thread = NULL;
+    bool wait_for_thread = false;
+    bool thread_exited = true;
+
+    /* Abort any in-flight synchronization so the wait below is short */
+    if (syscheck.sync_handle) {
+        asp_stop(syscheck.sync_handle);
+    }
+
+    w_rwlock_wrlock(&fim_sync_handle_rwlock);
+    is_fim_shutdown = true;
+    /* Re-cleared under the lock: the stop can land between start_daemon()'s shutdown check and
+     * its `fim_sync_module_running = 1`, and the lock orders this clear after that section. */
+    fim_sync_module_running = 0;
+    wait_for_thread = fim_sync_thread_initialized;
+    sync_thread = fim_sync_thread_handle;
+    fim_sync_thread_initialized = false;
+    fim_sync_thread_handle = NULL;
+    w_rwlock_unlock(&fim_sync_handle_rwlock);
+
+    if (wait_for_thread && sync_thread != NULL) {
+        /* Everything the thread can block on after asp_stop() is bounded, so it exits well within
+         * this timeout. If it does not, skip the teardown: destroying the handle under a live
+         * thread would be a use-after-free. */
+        if (WaitForSingleObject(sync_thread, FIM_SYNC_EXIT_TIMEOUT_MS) != WAIT_OBJECT_0) {
+            thread_exited = false;
+            mwarn("The FIM inventory synchronization thread did not exit in time: skipping the synchronization database teardown.");
+        }
+        CloseHandle(sync_thread);
+    }
+
+    if (thread_exited) {
+        /* Closes the connection to fim_sync.db cleanly: checkpoints and removes the -wal/-shm
+         * files instead of leaving them open. The write lock excludes the handle users that are
+         * not waited for above, which take it for reading around each asp_* call. */
+        w_rwlock_wrlock(&fim_sync_handle_rwlock);
+        if (syscheck.sync_handle) {
+            asp_destroy(syscheck.sync_handle);
+            syscheck.sync_handle = NULL;
+        }
+        w_rwlock_unlock(&fim_sync_handle_rwlock);
+    }
+}
+#endif
 
 bool fim_shutdown_process_on() {
     bool ret = is_fim_shutdown;
@@ -739,10 +806,23 @@ void start_daemon()
     }
 
     if (syscheck.enable_synchronization) {
-        fim_sync_module_running = 1;
-        if (CreateThread(NULL, 0, fim_run_integrity, NULL, 0, NULL) == NULL) {
-            merror(THREAD_ERROR);
+        // Published under the handle write lock, which fim_sync_teardown() also takes to decide
+        // the wait: either the thread is visible there and waited for before the handle is
+        // destroyed, or the teardown ran first and the shutdown check keeps it from starting.
+        w_rwlock_wrlock(&fim_sync_handle_rwlock);
+        if (fim_shutdown_process_on()) {
+            mdebug1("Shutdown in progress: not launching the FIM inventory synchronization thread.");
+        } else {
+            fim_sync_module_running = 1;
+            fim_sync_thread_handle = CreateThread(NULL, 0, fim_run_integrity, NULL, 0, NULL);
+            if (fim_sync_thread_handle == NULL) {
+                merror(THREAD_ERROR);
+                fim_sync_module_running = 0;
+            } else {
+                fim_sync_thread_initialized = true;
+            }
         }
+        w_rwlock_unlock(&fim_sync_handle_rwlock);
     } else {
         mdebug1("FIM inventory synchronization is disabled");
     }
