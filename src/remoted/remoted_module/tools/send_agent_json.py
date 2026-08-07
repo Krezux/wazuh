@@ -11,10 +11,11 @@ The two endpoints no longer behave the same way:
            authenticated identity and its own clock, and indexes one document per agent into
            `wazuh-agent-stats`. The answer is the protocol's empty acknowledgment, so proof of
            the round trip is the 200 plus the document showing up in the indexer.
-  /config  still a DUMMY: modulesd only checks the body is a JSON object, stamps
-           `wazuh.agent.id` (from the authenticated identity, NOT from the document) and
-           `@timestamp` onto it, echoes it back and discards it. That echo is what makes this
-           tool end-to-end proof that the UDS hop and the header propagation work.
+  /config  no longer a dummy: it validates the SAME outer shape as /stats -- a JSON object
+           carrying a non-empty `modules` object keyed by module name -- reduces it to that
+           content, stamps the authenticated identity (from the `X-Wazuh-Agent-Id` header
+           remoted sets, NOT from the document) plus the cluster identity, and indexes one
+           document per agent into `wazuh-agent-config`. Anything else is a 400.
 
 Signing is identical to send_stateless.py (see authMiddleware.cpp for the authoritative
 canonical string):
@@ -69,7 +70,9 @@ DEFAULT_STATS_BODY = (b'{"modules":{'
                       b'"tasks":{"dispatched":{"total":4},"discarded_duplicate":{"total":0},'
                       b'"failed":{"total":0}}},'
                       b'"logcollector":{"global":{"files":[]}}}}')
-DEFAULT_CONFIG_BODY = b'{"cpu":42,"mem":128,"note":"hello from python"}'
+DEFAULT_CONFIG_BODY = (b'{"modules":{'
+                       b'"fim":{"frequency":43200,"scan_on_start":true},'
+                       b'"logcollector":{"localfiles":2}}}')
 
 ENDPOINTS = ("/stats", "/config")
 
@@ -144,17 +147,20 @@ def scenario_valid(agent_id, agent_key, target):
 
 
 def scenario_claimed_identity(agent_id, agent_key, target):
-    # A document that claims an identity of its own. modulesd must keep the authenticated one:
-    # /stats drops the claim when it rebuilds the document, /config overrides it in place.
+    # A document that claims an identity of its own. modulesd must keep the authenticated one,
+    # taken from the X-Wazuh-Agent-Id header remoted sets: both endpoints rebuild the document
+    # from the reported `modules` and stamp the authenticated id, so the claim is dropped.
     body = (b'{"modules":{"agent":{"messages":{"count":1}}},'
             b'"agent_id":"999999","cluster":{"name":"claimed","node":"claimed"}}'
             if target.endswith("/stats")
-            else b'{"wazuh":{"cluster":{"name":"mycluster"},"agent":{"id":"999999"}},"payload":true}')
+            else b'{"modules":{"fim":{"frequency":43200}},'
+                 b'"wazuh":{"cluster":{"name":"mycluster"},"agent":{"id":"999999"}}}')
     return _auth_header(agent_id, agent_key, "1", "POST", target, int(time.time()), body), body
 
 
 def scenario_no_modules_object(agent_id, agent_key, target):
-    # A JSON object with nothing to store. Only /stats rejects it; /config takes any object.
+    # A JSON object with nothing to store. Both endpoints reject it: indexing an empty report
+    # would erase the agent's last good document, since the agent id is the _id.
     body = b'{"cpu":42}'
     return _auth_header(agent_id, agent_key, "1", "POST", target, int(time.time()), body), body
 
@@ -224,11 +230,12 @@ def scenario_body_too_large(agent_id, agent_key, target):
 
 
 # The expected status is either one code for both endpoints, or {target: code} where they
-# legitimately differ -- /stats validates the report's shape, /config still takes any object.
+# legitimately differ. Both endpoints now validate the same outer shape: a JSON object carrying
+# a non-empty `modules` object keyed by module name.
 SCENARIOS = [
     ("valid_request", 200, scenario_valid),
     ("claimed_identity", 200, scenario_claimed_identity),
-    ("no_modules_object", {"/stats": 400, "/config": 200}, scenario_no_modules_object),
+    ("no_modules_object", 400, scenario_no_modules_object),
     ("empty_body", 400, scenario_empty_body),
     ("body_not_an_object", 400, scenario_not_an_object),
     ("malformed_json", 400, scenario_malformed_json),
@@ -247,40 +254,14 @@ def check_success_body(target: str, response_text: str, agent_id: str) -> str:
     """For a 200, confirms the endpoint answered what it should. Returns '' when it did, or a
     human-readable reason when it did not.
 
-    The two endpoints prove themselves differently: /stats indexes and answers the protocol's
-    empty acknowledgment, so there is nothing to inspect and the check is that nothing came back;
-    /config is still a dummy and echoes the enriched document, which is what makes its own 200
-    evidence that the UDS hop and the header propagation work.
+    Both endpoints now index the report and answer the protocol's empty acknowledgment, so there
+    is nothing in the response to inspect and the check is that nothing came back. /config used
+    to echo the enriched document instead, which is why this once compared the stamped identity
+    here; that document now goes to `wazuh-agent-config`, so proving the identity stamping means
+    querying the indexer -- it cannot be seen from the response any more.
     """
-    if target.endswith("/stats"):
-        return "" if response_text.strip() in ("", "{}") \
-            else f"/stats must answer an empty acknowledgment, got {response_text[:80]!r}"
-
-    try:
-        document = json.loads(response_text)
-    except ValueError as exc:
-        return f"response is not JSON ({exc})"
-    if not isinstance(document, dict):
-        return "response is not a JSON object"
-
-    stamped_id = document.get("wazuh", {}).get("agent", {}).get("id")
-    if stamped_id is None:
-        return "wazuh.agent.id is missing from the echoed document"
-    # remoted forwards the id exactly as it appeared in the Authorization header, so compare
-    # numerically -- "001" and "1" are the same agent.
-    try:
-        same_agent = int(stamped_id) == int(agent_id)
-    except (TypeError, ValueError):
-        same_agent = str(stamped_id) == str(agent_id)
-    if not same_agent:
-        return f"wazuh.agent.id is {stamped_id!r}, expected the authenticated {agent_id!r}"
-
-    timestamp = document.get("@timestamp")
-    if not isinstance(timestamp, str) or len(timestamp) != 24 or timestamp[10] != "T" \
-            or not timestamp.endswith("Z"):
-        return f"@timestamp is not ISO8601-with-milliseconds: {timestamp!r}"
-
-    return ""
+    return "" if response_text.strip() in ("", "{}") \
+        else f"{target} must answer an empty acknowledgment, got {response_text[:80]!r}"
 
 
 def run_scenario(base_url, agent_id, agent_key, target, name, expected, build):
@@ -338,8 +319,8 @@ def main():
     parser.add_argument("--endpoint", default="stats", choices=("stats", "config"),
                         help="Which endpoint to send to (ignored with --all, which runs both).")
     parser.add_argument("--body", default=None,
-                        help="Raw request body to sign and send. Defaults to a report for /stats "
-                             "and any JSON object for /config; /stats needs a `modules` object.")
+                        help="Raw request body to sign and send. Defaults to a report for the "
+                             "chosen endpoint; both need a non-empty `modules` object.")
     parser.add_argument("--tamper", action="store_true",
                         help="Transmit a different body than the one signed, to prove the server "
                              "rejects a modified body with 401 InvalidMac.")
