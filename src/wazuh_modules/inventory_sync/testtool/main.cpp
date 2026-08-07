@@ -859,8 +859,14 @@ void sendEvent(bool verbose,
     // longer sends a standalone End message (or any of the chunked messages this testtool
     // simulates above); it sends one FullSession. Nothing to send here anymore.
 
-    std::cout << "\n[INFO] Waiting " << waitTime << " seconds for VD processing..." << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(waitTime));
+    // The manager sends EndAck only after it has fully processed the session -- including running
+    // the vulnerability scan -- so waiting for it (instead of sleeping a fixed duration) is what
+    // actually tells us processing is done, rather than guessing at how long that takes.
+    std::cout << "\n[INFO] Waiting up to " << waitTime << " seconds for EndAck (VD processing)..." << std::endl;
+    if (endAckFuture.wait_for(std::chrono::seconds(waitTime)) == std::future_status::timeout)
+    {
+        throw std::runtime_error("Timeout waiting for EndAck");
+    }
 }
 
 // Main
