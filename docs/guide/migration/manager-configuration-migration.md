@@ -196,8 +196,8 @@ The section is preserved. Update the certificate paths to reflect the new instal
 ```xml
 <auth>
   ...
-  <ssl_manager_cert>/var/wazuh-manager/etc/sslmanager.cert</ssl_manager_cert>
-  <ssl_manager_key>/var/wazuh-manager/etc/sslmanager.key</ssl_manager_key>
+  <ssl_manager_cert>/var/wazuh-manager/etc/certs/authd.pem</ssl_manager_cert>
+  <ssl_manager_key>/var/wazuh-manager/etc/certs/authd-key.pem</ssl_manager_key>
   ...
 </auth>
 ```
@@ -283,8 +283,8 @@ In 4.x the certificates pointed to Filebeat's certificate directory. In 5.0, Fil
     <certificate_authorities>
       <ca>/var/wazuh-manager/etc/certs/root-ca.pem</ca>
     </certificate_authorities>
-    <certificate>/var/wazuh-manager/etc/certs/manager.pem</certificate>
-    <key>/var/wazuh-manager/etc/certs/manager-key.pem</key>
+    <certificate>/var/wazuh-manager/etc/certs/indexer-connector.pem</certificate>
+    <key>/var/wazuh-manager/etc/certs/indexer-connector-key.pem</key>
   </ssl>
 </indexer>
 ```

@@ -49,9 +49,9 @@ sudo tar -xf wazuh-certificates.tar -C /var/wazuh-manager/etc/certs/ \
   ./$NODE_NAME.pem ./$NODE_NAME-key.pem ./root-ca.pem
 
 sudo mv /var/wazuh-manager/etc/certs/$NODE_NAME.pem \
-        /var/wazuh-manager/etc/certs/manager.pem
+        /var/wazuh-manager/etc/certs/indexer-connector.pem
 sudo mv /var/wazuh-manager/etc/certs/$NODE_NAME-key.pem \
-        /var/wazuh-manager/etc/certs/manager-key.pem
+        /var/wazuh-manager/etc/certs/indexer-connector-key.pem
 
 sudo chmod 500 /var/wazuh-manager/etc/certs
 sudo chmod 400 /var/wazuh-manager/etc/certs/*
@@ -78,8 +78,8 @@ Add the block to `/var/wazuh-manager/etc/wazuh-manager.conf` using your hosts an
     <certificate_authorities>
       <ca>/var/wazuh-manager/etc/certs/root-ca.pem</ca>
     </certificate_authorities>
-    <certificate>/var/wazuh-manager/etc/certs/manager.pem</certificate>
-    <key>/var/wazuh-manager/etc/certs/manager-key.pem</key>
+    <certificate>/var/wazuh-manager/etc/certs/indexer-connector.pem</certificate>
+    <key>/var/wazuh-manager/etc/certs/indexer-connector-key.pem</key>
   </ssl>
 </indexer>
 ```

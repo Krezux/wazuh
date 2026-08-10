@@ -9,7 +9,7 @@ constexpr auto DATABASE_PATH {"queue/keystore"};
 
 // File constants, used in the version 1 of the keystore, currently in use only for the upgrade to version 2, that uses
 // AES 256 encryption, without the need of the private key file.
-constexpr auto PRIVATE_KEY_FILE {"etc/sslmanager.key"};
+constexpr auto PRIVATE_KEY_FILE {"etc/certs/authd-key.pem"};
 
 // Keystore constants.
 // KS_VERSION is the current version of the keystore. Used to identify the version of the keystore in the database.

@@ -108,8 +108,8 @@ The test tool requires valid SSL certificates for secure communication with the 
       "certificate_authorities": [
         "/var/wazuh-manager/etc/certs/root-ca.pem"
       ],
-      "certificate": "/var/wazuh-manager/etc/certs/manager.pem",
-      "key": "/var/wazuh-manager/etc/certs/manager-key.pem"
+      "certificate": "/var/wazuh-manager/etc/certs/indexer-connector.pem",
+      "key": "/var/wazuh-manager/etc/certs/indexer-connector-key.pem"
     }
   }
 }

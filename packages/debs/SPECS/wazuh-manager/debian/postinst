@@ -118,25 +118,27 @@ case "$1" in
     # Remove Vuln-detector database
     rm -f ${DIR}/queue/vulnerabilities/cve.db || true
 
+    # Unified certificate directory owned by ${USER}: the daemons self-generate their server
+    # certificates here and read them after dropping privileges to that user.
+    mkdir -p ${DIR}/etc/certs
+
     # Generation auto-signed certificate if not exists
-    if [ ! -f "${DIR}/etc/sslmanager.key" ] && [ ! -f "${DIR}/etc/sslmanager.cert" ]; then
-        ${DIR}/bin/wazuh-manager-authd -C 365 -B 2048 -S "/C=US/ST=California/CN=Wazuh/" -K ${DIR}/etc/sslmanager.key -X ${DIR}/etc/sslmanager.cert 2>/dev/null
+    if [ ! -f "${DIR}/etc/certs/authd-key.pem" ] && [ ! -f "${DIR}/etc/certs/authd.pem" ]; then
+        ${DIR}/bin/wazuh-manager-authd -C 365 -B 2048 -S "/C=US/ST=California/CN=Wazuh/" -K ${DIR}/etc/certs/authd-key.pem -X ${DIR}/etc/certs/authd.pem 2>/dev/null
     fi
 
     # Generate auto-signed certificate for the HTTPS agent server (remoted_module) if not exists
-    if [ ! -f "${DIR}/etc/https-manager.key" ] && [ ! -f "${DIR}/etc/https-manager.cert" ]; then
-        ${DIR}/bin/wazuh-manager-remoted -C 365 -B 2048 -S "/C=US/ST=California/CN=Wazuh/" -K ${DIR}/etc/https-manager.key -X ${DIR}/etc/https-manager.cert 2>/dev/null
+    if [ ! -f "${DIR}/etc/certs/remoted-key.pem" ] && [ ! -f "${DIR}/etc/certs/remoted.pem" ]; then
+        ${DIR}/bin/wazuh-manager-remoted -C 365 -B 2048 -S "/C=US/ST=California/CN=Wazuh/" -K ${DIR}/etc/certs/remoted-key.pem -X ${DIR}/etc/certs/remoted.pem 2>/dev/null
     fi
 
-    # Both sslmanager.cert/key and https-manager.cert/key must be owned by ${USER}: both
-    # authd and remoted now drop privileges to that user before loading these files, so
-    # root-owned files would make either daemon fail to start. Re-applied unconditionally
-    # (not just on fresh generation) so upgrades from packages that shipped these root-owned
-    # also get corrected.
-    chown ${USER}:${GROUP} ${DIR}/etc/sslmanager.cert ${DIR}/etc/sslmanager.key > /dev/null 2>&1 || true
-    chmod 640 ${DIR}/etc/sslmanager.cert ${DIR}/etc/sslmanager.key > /dev/null 2>&1 || true
-    chown ${USER}:${GROUP} ${DIR}/etc/https-manager.cert ${DIR}/etc/https-manager.key > /dev/null 2>&1 || true
-    chmod 640 ${DIR}/etc/https-manager.cert ${DIR}/etc/https-manager.key > /dev/null 2>&1 || true
+    # Every certificate under etc/certs is owned by ${USER}: the daemons drop privileges to
+    # that user before reading (and regenerating) them, so root-owned files would make them
+    # fail to start. Re-applied unconditionally so upgrades that left them root-owned get
+    # corrected.
+    chown -R ${USER}:${GROUP} ${DIR}/etc/certs > /dev/null 2>&1 || true
+    chmod 750 ${DIR}/etc/certs > /dev/null 2>&1 || true
+    find ${DIR}/etc/certs -type f -exec chmod 640 {} \; > /dev/null 2>&1 || true
 
     if [ -z "$2" ]; then
         # For the etc dir
