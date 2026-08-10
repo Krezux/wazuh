@@ -86,13 +86,6 @@ env:
 jobs:
   run-test:
     if: inputs.module_name != 'none'
-    # The AWS integration tests share a single S3 bucket with fixed date-based prefixes, so two AWS
-    # shards running at the same time collide. Serialize them under a shared concurrency group (the
-    # same group name is used by the 4.x AWS IT workflow, so both branches serialize together). Non-AWS
-    # modules get a unique per-run group and keep running in parallel as before.
-    concurrency:
-      group: ${{ (inputs.setup_aws_credentials == true || inputs.setup_aws_credentials == 'true') && 'aws-integration-tests' || format('aws-it-none-{0}-{1}-{2}', github.run_id, inputs.module_name, inputs.shard_name) }}
-      cancel-in-progress: false
     timeout-minutes: ${{ inputs.timeout_minutes || 120 }}
     name: Run integration tests
     permissions:
@@ -233,6 +226,7 @@ jobs:
           cd tests/integration
           set +e
           sudo GITHUB_SHA="${{ github.sha }}" GITHUB_REF_NAME="${BRANCH_NAME}" \
+            GITHUB_RUN_ID="${GITHUB_RUN_ID}" \
             AWS_VPC_ID="${AWS_VPC_ID}" \
             AWS_BUCKET_NAME="${AWS_BUCKET_NAME}" \
             AWS_IT_CLEANUP_MANIFEST="${AWS_IT_CLEANUP_MANIFEST}" \

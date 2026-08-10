@@ -104,7 +104,9 @@ def test_path_suffix(
     only_logs_after = metadata['only_logs_after']
     path_suffix = metadata['path_suffix']
     expected_results = metadata['expected_results']
-    pattern = fr".*WARNING: Bucket:  -  No logs found in 'AWSLogs/{path_suffix}/'. Check the provided prefix.*\n*"
+    # '.*' before AWSLogs tolerates the per-run namespace prefix ('<run>/AWSLogs/...') injected under
+    # issue #38194; matches the bare 'AWSLogs/...' unchanged when running locally without a namespace.
+    pattern = fr".*WARNING: Bucket:  -  No logs found in '.*AWSLogs/{path_suffix}/'. Check the provided prefix.*\n*"
 
     parameters = [
         'wodles/aws/aws-s3',
@@ -114,6 +116,12 @@ def test_path_suffix(
         '--type', bucket_type,
         '--debug', '2'
     ]
+
+    # Under the per-run namespace (issue #38194) create_test_bucket injects a <path> into the config, so
+    # the module is invoked with --trail_prefix. No-op locally (no namespace -> no 'path' in metadata).
+    if metadata.get('path'):
+        parameters.insert(3, metadata['path'])
+        parameters.insert(3, '--trail_prefix')
 
     # Check AWS module started
     log_monitor.start(
@@ -149,9 +157,11 @@ def test_path_suffix(
     assert path_exist(path=S3_CLOUDTRAIL_DB_PATH)
 
     if expected_results:
+        # 'ns' is the per-run namespace prefix ('<run>/') injected under issue #38194, or '' locally.
+        ns = metadata.get('path', '')
         data = get_s3_db_row(table_name=bucket_type)
-        assert f"{bucket_name}/{path_suffix}/" == data.bucket_path
-        assert data.log_key.startswith(f"AWSLogs/{path_suffix}/")
+        assert f"{bucket_name}/{ns}{path_suffix}/" == data.bucket_path
+        assert data.log_key.startswith(f"{ns}AWSLogs/{path_suffix}/")
     else:
         assert not table_exists_or_has_values(table_name=bucket_type)
 
