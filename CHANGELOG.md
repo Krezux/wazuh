@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 
 ## [v4.14.9]
 
+### Agent
+
+#### Fixed
+
+- Fixed missing Windows FIM inventory for file names with non-ANSI characters. ([#38301](https://github.com/wazuh/wazuh/pull/38301))
+
 ## [v4.14.8]
 
 ### Manager
