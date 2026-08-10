@@ -45,6 +45,45 @@ _PERMANENT_SEED_KEYS = frozenset({
 # VPC permanent seed is identified by this flow-log-ID substring in its S3 key.
 _PERMANENT_SEED_FLOW_LOG_IDS = frozenset({'fl-0754d951c16f517fa'})
 
+# Per-run S3 namespace to isolate concurrent AWS IT runs on the shared bucket (issue #38194).
+# Every key a run uploads - and the module's configured path - is placed under "<GITHUB_RUN_ID>/",
+# so two runs executing at the same time never share keys/prefixes. Empty locally (no GITHUB_RUN_ID),
+# which keeps the current bucket layout for local runs.
+_RUN_ID = os.environ.get('GITHUB_RUN_ID', '')
+
+
+def _namespaced(path):
+    """Prefix a bucket path with the per-run namespace: '<run>/<path>' in CI, '<path>' locally."""
+    path = path or ''
+    if not _RUN_ID:
+        return path
+    return f"{_RUN_ID}/{path}".strip('/')
+
+
+def _copy_seeds_into_namespace(s3_client, bucket_name):
+    """Mirror the permanent seeds under the per-run namespace so the module's check_bucket /
+    find_account_ids see the expected AWSLogs/ structure at '<run>/AWSLogs/...'. The originals at the
+    bucket root are never modified; the copies live under '<run>/' and are removed with the namespace.
+    """
+    if not _RUN_ID:
+        return
+    for key in _PERMANENT_SEED_KEYS:
+        try:
+            s3_client.Object(bucket_name, f"{_RUN_ID}/{key}").copy_from(
+                CopySource={'Bucket': bucket_name, 'Key': key})
+        except Exception as exc:
+            logger.warning("Could not copy seed '%s' into run namespace: %s", key, exc)
+
+
+def _delete_run_namespace(s3_client, bucket_name):
+    """Delete the whole per-run namespace '<run>/' (test data + seed copies). Never touches the root."""
+    if not _RUN_ID:
+        return
+    try:
+        s3_client.Bucket(bucket_name).objects.filter(Prefix=f"{_RUN_ID}/").delete()
+    except Exception as exc:
+        logger.warning("Could not delete run namespace '%s/': %s", _RUN_ID, exc)
+
 
 def _record_uploaded_key(key):
     """Append an uploaded key to the cleanup manifest, if one is configured.
@@ -77,9 +116,16 @@ def record_uploaded_key():
     return _record_uploaded_key
 
 
+def _is_permanent_seed(key):
+    """True if key is a permanent seed - the root seed OR its per-run namespaced copy ('<run>/<seed>')."""
+    candidate = key[len(_RUN_ID) + 1:] if _RUN_ID and key.startswith(f"{_RUN_ID}/") else key
+    return (candidate in _PERMANENT_SEED_KEYS
+            or any(fid in key for fid in _PERMANENT_SEED_FLOW_LOG_IDS))
+
+
 def _safe_delete_key(key, bucket_name, s3_client):
     """Delete one key from the shared bucket; log failures; refuse to touch permanent seeds."""
-    if key in _PERMANENT_SEED_KEYS or any(fid in key for fid in _PERMANENT_SEED_FLOW_LOG_IDS):
+    if _is_permanent_seed(key):
         logger.warning("TEARDOWN: skipping permanent seed key: %s", key)
         return
     try:
@@ -114,8 +160,7 @@ def _assert_prefix_clean(bucket_name, key, s3_client):
     prefix = key.rsplit('/', 1)[0] + '/' if '/' in key else ''
     unexpected = [
         obj.key for obj in s3_client.Bucket(bucket_name).objects.filter(Prefix=prefix, Delimiter='/')
-        if obj.key not in _PERMANENT_SEED_KEYS
-        and not any(fid in obj.key for fid in _PERMANENT_SEED_FLOW_LOG_IDS)
+        if not _is_permanent_seed(obj.key)  # root seeds and their per-run namespaced copies
         and not obj.key.endswith('/')  # skip S3 folder-marker objects (empty keys ending with /)
     ]
     if unexpected:
@@ -354,14 +399,34 @@ def test_configuration() -> dict:
     return {}
 
 
+@pytest.fixture(scope='session', autouse=True)
+def aws_run_namespace():
+    """Isolate this run under '<GITHUB_RUN_ID>/' on the shared bucket (issue #38194).
+
+    Mirrors the permanent seeds into the namespace at session start so the module's check_bucket /
+    find_account_ids find the AWSLogs/ structure under '<run>/', and deletes the whole namespace at the
+    end. No-op locally (no GITHUB_RUN_ID). Uses its own S3 resource because it is session-scoped.
+    """
+    bucket = os.environ.get('AWS_BUCKET_NAME')
+    if not _RUN_ID or not bucket:
+        yield
+        return
+    profile = os.environ.get('AWS_PROFILE', 'default')
+    s3 = boto3.Session(profile_name=profile).resource(service_name='s3', region_name=US_EAST_1_REGION)
+    _copy_seeds_into_namespace(s3, bucket)
+    yield
+    _delete_run_namespace(s3, bucket)
+
+
 @pytest.fixture()
-def create_test_bucket(metadata: dict, test_configuration: dict):
+def create_test_bucket(metadata: dict, test_configuration: dict, aws_run_namespace):
     """Use a pre-existing S3 bucket for tests.
 
     Args:
         metadata (dict): Bucket information.
         test_configuration (dict): Wazuh configuration template built at import time.
             Patched in-place so set_wazuh_configuration writes the shared bucket into ossec.conf.
+        aws_run_namespace: ensures the per-run namespace (seeds) is set up before the test.
     """
     shared_bucket = os.environ.get('AWS_BUCKET_NAME')
     if not shared_bucket:
@@ -375,6 +440,12 @@ def create_test_bucket(metadata: dict, test_configuration: dict):
     # Override so all S3 operations and the Wazuh module CLI use the shared bucket.
     metadata['bucket_name'] = shared_bucket
 
+    # Namespace the bucket path under the per-run prefix so concurrent runs never share keys. The
+    # uploaded keys (via manage_bucket_files -> generate_file) and the module's configured <path> both
+    # use this value, so they stay aligned. No-op locally.
+    namespaced_path = _namespaced(metadata.get('path', ''))
+    metadata['path'] = namespaced_path
+
     # Patch test_configuration so set_wazuh_configuration writes the shared bucket into ossec.conf.
     # Without this, ossec.conf keeps the YAML name (plus the session suffix added by _modify_metadata),
     # causing a mismatch with metadata['bucket_name'] and triggering incorrect_parameters failures.
@@ -382,9 +453,18 @@ def create_test_bucket(metadata: dict, test_configuration: dict):
         for element in section.get('elements', []):
             bucket_cfg = element.get('bucket')
             if isinstance(bucket_cfg, dict):
-                for bucket_elem in bucket_cfg.get('elements', []):
+                bucket_elements = bucket_cfg.setdefault('elements', [])
+                path_found = False
+                for bucket_elem in bucket_elements:
                     if 'name' in bucket_elem:
                         bucket_elem['name']['value'] = shared_bucket
+                    if 'path' in bucket_elem:
+                        bucket_elem['path']['value'] = namespaced_path
+                        path_found = True
+                # A path-less bucket type (reads the bucket root) needs an explicit <path> so the
+                # module reads under the run namespace instead of the shared root.
+                if _RUN_ID and not path_found:
+                    bucket_elements.append({'path': {'value': namespaced_path}})
 
 
 @pytest.fixture
