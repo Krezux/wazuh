@@ -53,11 +53,17 @@ _RUN_ID = os.environ.get('GITHUB_RUN_ID', '')
 
 
 def _namespaced(path):
-    """Prefix a bucket path with the per-run namespace: '<run>/<path>' in CI, '<path>' locally."""
+    """Prefix a bucket path with the per-run namespace: '<run>/<path>' in CI, '<path>' locally.
+
+    The original path's trailing-slash semantics are preserved (only the run id is prepended): the module
+    builds its base prefix as '{path}AWSLogs/' (string concat, not a path join), so an empty path must map
+    to '<run>/' - WITH the trailing slash - to read '<run>/AWSLogs/...'. Stripping it would yield
+    '<run>AWSLogs/' and the module would find nothing. os.path.join in generate_file tolerates either form.
+    """
     path = path or ''
     if not _RUN_ID:
         return path
-    return f"{_RUN_ID}/{path}".strip('/')
+    return f"{_RUN_ID}/{path}"
 
 
 def _copy_seeds_into_namespace(s3_client, bucket_name):
@@ -444,7 +450,11 @@ def create_test_bucket(metadata: dict, test_configuration: dict, aws_run_namespa
     # uploaded keys (via manage_bucket_files -> generate_file) and the module's configured <path> both
     # use this value, so they stay aligned. No-op locally.
     namespaced_path = _namespaced(metadata.get('path', ''))
-    metadata['path'] = namespaced_path
+    # Only mutate metadata['path'] when a run namespace is active; otherwise (local, no GITHUB_RUN_ID)
+    # leave it untouched so path-less cases keep no 'path' key and the tests don't emit a spurious
+    # --trail_prefix "" that the module (empty path) never logs.
+    if _RUN_ID:
+        metadata['path'] = namespaced_path
 
     # Patch test_configuration so set_wazuh_configuration writes the shared bucket into ossec.conf.
     # Without this, ossec.conf keeps the YAML name (plus the session suffix added by _modify_metadata),
