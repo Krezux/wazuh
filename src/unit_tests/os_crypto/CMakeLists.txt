@@ -35,7 +35,7 @@ elseif(${TARGET} STREQUAL "agent" OR ${TARGET} STREQUAL "winagent")
         link_libraries(
             -Wl,--wrap=syscom_dispatch
             -Wl,--wrap=Start_win32_Syscheck
-            -Wl,--wrap=is_fim_shutdown)
+            -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_sync_teardown)
     endif()
     add_subdirectory(aes)
     add_subdirectory(hmac)

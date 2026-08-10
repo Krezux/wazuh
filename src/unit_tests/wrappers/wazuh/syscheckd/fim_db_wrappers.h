@@ -74,6 +74,8 @@ void __wrap_is_fim_shutdown();
 
 void __wrap_fim_db_teardown();
 
+void __wrap_fim_sync_teardown();
+
 void __wrap__imp__dbsync_initialize();
 
 void __wrap_fim_db_close_and_delete_database();

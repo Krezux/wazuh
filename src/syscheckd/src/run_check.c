@@ -82,7 +82,6 @@ int fim_sync_exit_pipe[2] = {-1, -1};
 // closed before the SCM is told the service stopped, or an uninstall deletes the installation
 // while fim_sync.db and its -wal/-shm are still open (issue #38212).
 static HANDLE fim_sync_thread_handle = NULL;
-static bool fim_sync_thread_initialized = false;
 
 #define FIM_SYNC_EXIT_TIMEOUT_MS 20000
 #endif
@@ -136,7 +135,6 @@ bool is_fim_shutdown = false;
  */
 void fim_sync_teardown() {
     HANDLE sync_thread = NULL;
-    bool wait_for_thread = false;
     bool thread_exited = true;
 
     /* Abort any in-flight synchronization so the wait below is short */
@@ -149,13 +147,11 @@ void fim_sync_teardown() {
     /* Re-cleared under the lock: the stop can land between start_daemon()'s shutdown check and
      * its `fim_sync_module_running = 1`, and the lock orders this clear after that section. */
     fim_sync_module_running = 0;
-    wait_for_thread = fim_sync_thread_initialized;
     sync_thread = fim_sync_thread_handle;
-    fim_sync_thread_initialized = false;
     fim_sync_thread_handle = NULL;
     w_rwlock_unlock(&fim_sync_handle_rwlock);
 
-    if (wait_for_thread && sync_thread != NULL) {
+    if (sync_thread != NULL) {
         /* Everything the thread can block on after asp_stop() is bounded, so it exits well within
          * this timeout. If it does not, skip the teardown: destroying the handle under a live
          * thread would be a use-after-free. */
@@ -806,23 +802,16 @@ void start_daemon()
     }
 
     if (syscheck.enable_synchronization) {
-        // Published under the handle write lock, which fim_sync_teardown() also takes to decide
-        // the wait: either the thread is visible there and waited for before the handle is
-        // destroyed, or the teardown ran first and the shutdown check keeps it from starting.
-        w_rwlock_wrlock(&fim_sync_handle_rwlock);
-        if (fim_shutdown_process_on()) {
-            mdebug1("Shutdown in progress: not launching the FIM inventory synchronization thread.");
-        } else {
-            fim_sync_module_running = 1;
-            fim_sync_thread_handle = CreateThread(NULL, 0, fim_run_integrity, NULL, 0, NULL);
-            if (fim_sync_thread_handle == NULL) {
-                merror(THREAD_ERROR);
-                fim_sync_module_running = 0;
-            } else {
-                fim_sync_thread_initialized = true;
-            }
+        fim_sync_module_running = 1;
+        // The handle is kept so fim_sync_teardown() can wait for this thread before destroying
+        // the synchronization handle. Plain store, no lock: the startup path is left as it was,
+        // and a teardown racing this creation just reads NULL, skips the wait and destroys the
+        // handle under its write lock, which the fresh thread then observes as NULL.
+        fim_sync_thread_handle = CreateThread(NULL, 0, fim_run_integrity, NULL, 0, NULL);
+        if (fim_sync_thread_handle == NULL) {
+            merror(THREAD_ERROR);
+            fim_sync_module_running = 0;
         }
-        w_rwlock_unlock(&fim_sync_handle_rwlock);
     } else {
         mdebug1("FIM inventory synchronization is disabled");
     }
