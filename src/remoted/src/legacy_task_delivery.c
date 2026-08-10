@@ -657,7 +657,7 @@ bool legacy_task_process_upgrade_ack(const char *agent_id, const char *ack_json)
     cJSON *parameters_obj = cJSON_GetObjectItem(ack, "parameters");
     cJSON *error_obj = parameters_obj ? cJSON_GetObjectItem(parameters_obj, "error") : NULL;
 
-    if (!cJSON_IsNumber(error_obj)) {
+    if (!error_obj || !cJSON_IsNumber(error_obj)) {
         mdebug1("legacy_task_delivery: agent '%s' sent an upgrade acknowledgment with a missing or "
                 "invalid 'parameters.error', ignoring", agent_id);
         cJSON_Delete(ack);
