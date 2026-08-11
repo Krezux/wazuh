@@ -18,11 +18,6 @@
 
 namespace
 {
-    constexpr uint32_t CONTROL_MAX_ATTEMPTS = 4;
-
-    // Consecutive undeliverable `/control` outcomes before producers are paused.
-    constexpr uint32_t CONTROL_UNDELIVERABLE_THRESHOLD = 2;
-
     HttpRequestSpec controlSpec(const std::string& body, uint32_t timeoutMs)
     {
         HttpRequestSpec spec;
@@ -273,7 +268,7 @@ OutcomeClass ControlStream::sendStartup(Waiter& waiter)
     LOGFN_DEBUG2(m_logFn, "Sending /control startup.");
 
     const auto result = m_sender.send(controlSpec(body, m_config.requestTimeoutMs), waiter,
-                                      CONTROL_MAX_ATTEMPTS);
+                                      m_config.controlMaxAttempts);
     updateLocalIp(result.response);
 
     if (result.outcome == OutcomeClass::Ok)
@@ -335,7 +330,7 @@ OutcomeClass ControlStream::sendNotify(Waiter& waiter)
     LOGFN_DEBUG2(m_logFn, "Sending /control notify.");
 
     const auto result = m_sender.send(controlSpec(body, m_config.requestTimeoutMs), waiter,
-                                      CONTROL_MAX_ATTEMPTS);
+                                      m_config.controlMaxAttempts);
     updateLocalIp(result.response);
     const auto effects = m_machine.onEvent(eventFor(result.outcome));
     applyEffects(effects, {});
@@ -602,18 +597,18 @@ void ControlStream::updateProducerPause(OutcomeClass outcome)
         return;
     }
 
-    if (++m_undeliverableStreak < CONTROL_UNDELIVERABLE_THRESHOLD)
+    if (++m_undeliverableStreak < m_config.producerPauseThreshold)
     {
         LOGFN_DEBUG1(m_logFn, "/control undeliverable, outcome %d (%u/%u).",
                      static_cast<int>(outcome), m_undeliverableStreak,
-                     CONTROL_UNDELIVERABLE_THRESHOLD);
+                     m_config.producerPauseThreshold);
         return;
     }
 
     m_producersPaused = true;
     LOGFN_DEBUG1(m_logFn, "/control undeliverable, outcome %d (%u/%u); pausing event production.",
                  static_cast<int>(outcome), m_undeliverableStreak,
-                 CONTROL_UNDELIVERABLE_THRESHOLD);
+                 m_config.producerPauseThreshold);
     m_sink.onProducerPause(true);
 }
 

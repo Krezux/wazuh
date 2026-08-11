@@ -1576,6 +1576,40 @@ static bool bridge_build_config(hc_config_t *config)
     config->config_report_enabled = agt->config_report.enabled;
     config->config_report_interval_s = (uint32_t)agt->config_report.interval;
 
+    /* Connection timing contract (#38284). Every value below used to be a
+     * compile-time constant the bridge never populated, so the agreed
+     * agent<->manager defaults could only be changed by rebuilding. They are
+     * internal options now; getDefine_Int_default() keeps the module's own
+     * fallback reachable, so a stripped internal_options.conf cannot stop the
+     * agent from starting (getDefine_Int would merror_exit instead).
+     *
+     * The module reads 0 as "use my default", and the defaults below are the
+     * same numbers, so an unset option and an explicit default agree. */
+    config->request_timeout_ms =
+        (uint32_t)getDefine_Int_default("agent", "https_request_timeout", 1000, 600000, 10000);
+    config->stateful_timeout_ms =
+        (uint32_t)getDefine_Int_default("agent", "https_stateful_timeout", 1000, 3600000, 120000);
+    config->backoff_base_ms = (uint32_t)getDefine_Int_default("agent", "https_backoff_base", 100, 60000, 1000);
+    config->backoff_cap_ms = (uint32_t)getDefine_Int_default("agent", "https_backoff_cap", 1000, 3600000, 60000);
+    config->drain_timeout_ms = (uint32_t)getDefine_Int_default("agent", "https_drain_timeout", 100, 60000, 5000);
+    config->rejected_retry_interval_s =
+        (uint32_t)getDefine_Int_default("agent", "https_rejected_retry_interval", 1, 86400, 60);
+    config->wpk_max_download_bytes =
+        (uint64_t)getDefine_Int_default("agent", "https_wpk_max_download_bytes", 1048576, 2147483647, 209715200);
+    config->buffer_cap_multiplier =
+        (uint32_t)getDefine_Int_default("agent", "https_buffer_cap_multiplier", 1, 1024, 4);
+
+    /* Per-stream retry budgets: TOTAL tries, so 1 means "never retry". A step's
+     * worst case is roughly attempts x its timeout plus the jittered backoff
+     * between them, which is what has to stay inside the manager's own
+     * deadlines -- raise these together with the timeouts above, not alone. */
+    config->control_max_attempts = (uint32_t)getDefine_Int_default("agent", "https_control_attempts", 1, 64, 4);
+    config->stateless_max_attempts = (uint32_t)getDefine_Int_default("agent", "https_stateless_attempts", 1, 64, 5);
+    config->stateful_max_attempts = (uint32_t)getDefine_Int_default("agent", "https_stateful_attempts", 1, 64, 5);
+    config->download_max_attempts = (uint32_t)getDefine_Int_default("agent", "https_download_attempts", 1, 64, 2);
+    config->producer_pause_threshold =
+        (uint32_t)getDefine_Int_default("agent", "https_producer_pause_threshold", 1, 1000, 2);
+
     /* Occupancy ladder: the same internal options the legacy client buffer
      * read, so tuned thresholds keep working. */
     g_buffer_warn_level = getDefine_Int("agent", "warn_level", 1, 100);

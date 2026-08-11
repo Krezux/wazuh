@@ -65,6 +65,16 @@ struct ModuleConfig
         uint32_t backoffCapMs {60000};
         uint32_t drainTimeoutMs {5000};
 
+        // Per-stream retry budgets (total tries, not retries-after-the-first).
+        // Consumed only by Retryable/BackPressure outcomes.
+        uint32_t controlMaxAttempts {4};
+        uint32_t statelessMaxAttempts {5};
+        uint32_t statefulMaxAttempts {5};
+        uint32_t downloadMaxAttempts {2};
+
+        /// Consecutive undeliverable /control steps before producers pause.
+        uint32_t producerPauseThreshold {2};
+
         std::string spoolDir;
 
         // #37843 periodic reporters (both off by default).

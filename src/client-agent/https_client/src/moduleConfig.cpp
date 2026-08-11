@@ -61,6 +61,11 @@ ModuleConfig ModuleConfig::fromC(const hc_config_t& config)
     typed.backoffBaseMs = orDefault<uint32_t>(config.backoff_base_ms, 1000);
     typed.backoffCapMs = orDefault<uint32_t>(config.backoff_cap_ms, 60000);
     typed.drainTimeoutMs = orDefault<uint32_t>(config.drain_timeout_ms, 5000);
+    typed.controlMaxAttempts = orDefault<uint32_t>(config.control_max_attempts, 4);
+    typed.statelessMaxAttempts = orDefault<uint32_t>(config.stateless_max_attempts, 5);
+    typed.statefulMaxAttempts = orDefault<uint32_t>(config.stateful_max_attempts, 5);
+    typed.downloadMaxAttempts = orDefault<uint32_t>(config.download_max_attempts, 2);
+    typed.producerPauseThreshold = orDefault<uint32_t>(config.producer_pause_threshold, 2);
     typed.spoolDir = boundedString(config.spool_dir, sizeof(config.spool_dir));
     typed.syncSocketPath = boundedString(config.sync_socket_path, sizeof(config.sync_socket_path));
     return typed;
