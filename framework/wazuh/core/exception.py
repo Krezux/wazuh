@@ -225,7 +225,8 @@ class WazuhException(Exception):
         1761: {'message': 'Could not send restart/reload command. This operation via API requires agent version 5.0 or higher.'
                },
         1762: {'message': 'Could not get statistics from the agent. '
-                          'This operation via API requires agent version 5.0 or higher.'
+                          'This operation via API requires an agent below version 5.0. '
+                          'Agents 5.0 and higher report their own statistics.'
                },
 
         # Manager:

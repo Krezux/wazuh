@@ -1818,6 +1818,8 @@ test_name: GET /agents/{agent_id}/daemons/stats
 
 stages:
 
+  # remoted only keeps per-agent counters for the legacy listener, and every agent in this
+  # environment is v5.0.0+, so the version gate rejects them all with 1762.
   - name: Get all daemons' stats from agent 001
     request:
       verify: False
@@ -1828,18 +1830,15 @@ stages:
     response:
       status_code: 200
       json:
-        error: 2
+        error: 1
         data:
-          affected_items:
-            - timestamp: !anystr
-              name: wazuh-manager-remoted
-              agents:
-                - id: 1
-                  uptime: !anystr
-                  metrics: !anything
+          affected_items: []
           failed_items:
-            - id: [ wazuh-manager-analysisd ]
-          total_affected_items: 1
+            - id:
+                - '001'
+              error:
+                code: 1762
+          total_affected_items: 0
           total_failed_items: 1
 
 
@@ -1870,18 +1869,16 @@ stages:
     response:
       status_code: 200
       json:
-        error: 0
+        error: 1
         data:
-          affected_items:
-            - timestamp: !anystr
-              name: wazuh-manager-remoted
-              agents:
-                - id: 1
-                  uptime: !anystr
-                  metrics: !anything
-          failed_items: []
-          total_affected_items: 1
-          total_failed_items: 0
+          affected_items: []
+          failed_items:
+            - id:
+                - '001'
+              error:
+                code: 1762
+          total_affected_items: 0
+          total_failed_items: 1
 
   - name: Try to get daemon stats from a non-existent agent
     request:

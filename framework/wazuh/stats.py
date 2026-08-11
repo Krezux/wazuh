@@ -63,12 +63,14 @@ def get_daemons_stats_agents(daemons_list: list = None, agent_list: list = None)
             # HTTPS: No status filtering needed, get stats regardless of connection state
             eligible_agents = agent_list - not_found_agents
 
-            # getstats has no legacy relay for agents below v5.0.0.
-            # Same shape restart/reload's own gate already uses (agent.py:245,357).
+            # remoted only keeps per-agent counters for the legacy listener, so getagentsstats
+            # serves agents below v5.0.0 and nothing else. Mirrors the filter remoted applies to
+            # the bulk 'all' response (remcom_filter_pre_v5_agent_ids), which also drops agents of
+            # unknown version.
             queryable_agents = set()
             for agent_id in eligible_agents:
                 version = agent_versions.get(agent_id)
-                if not version or WazuhVersion(version) < WazuhVersion('v5.0.0'):
+                if not version or WazuhVersion(version) >= WazuhVersion('v5.0.0'):
                     result.add_failed_item(id_=agent_id, error=exception.WazuhError(1762))
                     continue
                 queryable_agents.add(agent_id)
