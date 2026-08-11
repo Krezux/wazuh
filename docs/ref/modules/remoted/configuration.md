@@ -734,6 +734,41 @@ see [HTTPS Events API](https-events-api.md#content-encoding-zstd).
 - **Default value:** `10485760` (10 MiB)
 - **Allowed values:** Integer from `1048576` (1 MiB) to `67108864` (64 MiB)
 
+#### remoted.control_keepalive_throttle
+
+Minimum seconds between two wazuh-db keepalive writes for the same agent. `notify` requests
+arriving faster than this are answered normally but absorbed in memory without touching the
+database.
+
+- **Default value:** `60`
+- **Allowed values:** Integer from `1` to `3600`
+- **Note:** This must stay at or above the agent's notify cadence, or every notify becomes a
+  database write. It must also stay well below `<global><agents_disconnection_time>` (default
+  `15m`), since a throttled notify is what refreshes `last_keepalive` -- set the throttle above
+  the disconnection time and active agents are reported as disconnected.
+
+#### remoted.control_registry_eviction_ttl
+
+Seconds an agent may go without contacting `/control` before its in-memory registry entry (cached
+metadata, group hashes, last-keepalive bookkeeping) is dropped. A later request simply repopulates
+it, at the cost of one full wazuh-db round-trip.
+
+- **Default value:** `21600` (6 hours)
+- **Allowed values:** Integer from `60` to `604800` (7 days)
+- **Note:** Keep it above `<global><agents_disconnection_time>` so an agent is marked disconnected
+  before its cache is discarded; otherwise a fleet of long-idle agents pays the repopulation cost
+  in a burst.
+
+#### remoted.control_registry_eviction_interval
+
+Seconds between registry eviction sweeps. The sweep is what applies
+`remoted.control_registry_eviction_ttl`, so an entry can outlive its TTL by up to one interval.
+
+- **Default value:** `300`
+- **Allowed values:** Integer from `1` to `86400`
+- **Note:** Only worth lowering when the TTL is also lowered; a sweep interval longer than the TTL
+  makes the TTL effectively equal to the interval.
+
 ---
 
 ## Configuration Examples
