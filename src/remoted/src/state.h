@@ -72,8 +72,6 @@ typedef struct _remoted_agent_state_t
 {
     uint64_t uptime;
     uint64_t recv_events_count;
-    uint64_t recv_ctrl_count;
-    uint64_t recv_states_count;
     uint32_t recv_upgrade_ack_count;
     ctrl_msgs_t ctrl_breakdown;
     sent_msgs_t sent_breakdown;
@@ -115,15 +113,13 @@ void rem_inc_recv_events(const char* agent_id);
 
 /**
  * @brief Increment received control messages counter
- * @param agent_id Id of the agent that corresponds to the message
  */
-void rem_inc_recv_ctrl(const char* agent_id);
+void rem_inc_recv_ctrl();
 
 /**
  * @brief Increment received state messages counter
- * @param agent_id Id of the agent that corresponds to the message
  */
-void rem_inc_recv_states(const char* agent_id);
+void rem_inc_recv_states();
 
 /**
  * @brief Increment received upgrade-ack messages counter

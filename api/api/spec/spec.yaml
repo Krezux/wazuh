@@ -1076,10 +1076,6 @@ components:
                       received_breakdown:
                         type: object
                         properties:
-                          control:
-                            type: integer
-                            format: int32
-                            description: "Control messages received from agent"
                           control_breakdown:
                             type: object
                             properties:
@@ -1099,10 +1095,14 @@ components:
                                 type: integer
                                 format: int32
                                 description: "Startup messages from agent"
-                          event:
+                          events:
                             type: integer
                             format: int32
                             description: "Event messages (syscheck, syscollector, logcollector, etc.) received from agent"
+                          upgrade_ack:
+                            type: integer
+                            format: int32
+                            description: "Upgrade acknowledgments received from agent"
                       sent_breakdown:
                         type: object
                         properties:
@@ -4498,13 +4498,13 @@ paths:
                           metrics:
                             messages:
                               received_breakdown:
-                                control: 2
                                 control_breakdown:
                                   keepalive: 1
                                   request: 0
                                   shutdown: 0
                                   startup: 1
-                                event: 195
+                                events: 195
+                                upgrade_ack: 0
                               sent_breakdown:
                                 ack: 2
                                 ar: 0

@@ -32,12 +32,12 @@ void __wrap_rem_add_recv(unsigned long bytes) {
     check_expected(bytes);
 }
 
-void __wrap_rem_inc_recv_ctrl(const char *agent_id) {
-    check_expected(agent_id);
+void __wrap_rem_inc_recv_ctrl() {
+    function_called();
 }
 
-void __wrap_rem_inc_recv_states(const char *agent_id) {
-    check_expected(agent_id);
+void __wrap_rem_inc_recv_states() {
+    function_called();
 }
 
 void __wrap_rem_inc_recv_upgrade_ack(const char *agent_id) {

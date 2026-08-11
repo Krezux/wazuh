@@ -46,18 +46,6 @@ STATIC void w_remoted_clean_agents_state(int *sock);
 static void rem_inc_agents_recv_events(const char *agent_id);
 
 /**
- * @brief Increment received control messages counter for agents
- * @param agent_id Id of the agent that corresponds to the message
- */
-static void rem_inc_agents_recv_ctrl(const char *agent_id);
-
-/**
- * @brief Increment received state messages counter for agents
- * @param agent_id Id of the agent that corresponds to the message
- */
-static void rem_inc_agents_recv_states(const char *agent_id);
-
-/**
  * @brief Increment received upgrade-ack messages counter for agents
  * @param agent_id Id of the agent that corresponds to the message
  */
@@ -199,20 +187,6 @@ static void rem_inc_agents_recv_events(const char *agent_id) {
     w_mutex_unlock(&agents_state_mutex);
 }
 
-static void rem_inc_agents_recv_ctrl(const char *agent_id) {
-    w_mutex_lock(&agents_state_mutex);
-    remoted_agent_state_t *agent_node = get_node(agent_id);
-    agent_node->recv_ctrl_count++;
-    w_mutex_unlock(&agents_state_mutex);
-}
-
-static void rem_inc_agents_recv_states(const char *agent_id) {
-    w_mutex_lock(&agents_state_mutex);
-    remoted_agent_state_t *agent_node = get_node(agent_id);
-    agent_node->recv_states_count++;
-    w_mutex_unlock(&agents_state_mutex);
-}
-
 static void rem_inc_agents_recv_upgrade_ack(const char *agent_id) {
     w_mutex_lock(&agents_state_mutex);
     remoted_agent_state_t *agent_node = get_node(agent_id);
@@ -311,24 +285,16 @@ void rem_inc_recv_events(const char *agent_id) {
     }
 }
 
-void rem_inc_recv_ctrl(const char *agent_id) {
+void rem_inc_recv_ctrl() {
     w_mutex_lock(&state_mutex);
     remoted_state.recv_breakdown.ctrl_count++;
     w_mutex_unlock(&state_mutex);
-
-    if (agent_id != NULL) {
-        rem_inc_agents_recv_ctrl(agent_id);
-    }
 }
 
-void rem_inc_recv_states(const char *agent_id) {
+void rem_inc_recv_states() {
     w_mutex_lock(&state_mutex);
     remoted_state.recv_breakdown.states_count++;
     w_mutex_unlock(&state_mutex);
-
-    if (agent_id != NULL) {
-        rem_inc_agents_recv_states(agent_id);
-    }
 }
 
 void rem_inc_recv_upgrade_ack(const char *agent_id) {
@@ -608,8 +574,6 @@ cJSON* rem_create_agents_state_json(int* agents_ids) {
                 cJSON *_received_breakdown = cJSON_CreateObject();
                 cJSON_AddItemToObject(_messages, "received_breakdown", _received_breakdown);
 
-                cJSON_AddNumberToObject(_received_breakdown, "control", agent_state->recv_ctrl_count);
-
                 cJSON *_control_breakdown = cJSON_CreateObject();
                 cJSON_AddItemToObject(_received_breakdown, "control_breakdown", _control_breakdown);
 
@@ -619,7 +583,6 @@ cJSON* rem_create_agents_state_json(int* agents_ids) {
                 cJSON_AddNumberToObject(_control_breakdown, "startup", agent_state->ctrl_breakdown.startup_count);
 
                 cJSON_AddNumberToObject(_received_breakdown, "events", agent_state->recv_events_count);
-                cJSON_AddNumberToObject(_received_breakdown, "states", agent_state->recv_states_count);
                 cJSON_AddNumberToObject(_received_breakdown, "upgrade_ack", agent_state->recv_upgrade_ack_count);
 
                 cJSON *_sent_breakdown = cJSON_CreateObject();

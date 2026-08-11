@@ -1162,7 +1162,7 @@ STATIC void HandleSecureMessage(const message_t *message, w_indexed_queue_t * co
                 _close_sock(&keys, sock_idle);
             }
 
-            rem_inc_recv_ctrl(key->id);
+            rem_inc_recv_ctrl();
 
             if (validation_result == 1) {
                 // Message should be queued for database processing
@@ -1311,6 +1311,9 @@ STATIC bool discard_legacy_agent_message(const char* msg, const char* agent_id) 
         // legacy_task_delivery.c). NOT discarded: the ack still falls through to the normal
         // analysisd/Engine event path (batch_queue_enqueue_ex) like any other agent message.
         legacy_task_process_upgrade_ack(agent_id, msg + UPGRADE_ACK_HEADER_SIZE);
+        // The same message also increments the events counter downstream: it really is forwarded
+        // to the Engine, so both counters describe what they name.
+        rem_inc_recv_upgrade_ack(agent_id);
         mdebug2("Upgrade acknowledgment from agent '%s' routed to the normal event path", agent_id);
         return false;
     }

@@ -79,8 +79,6 @@ static int test_setup_agent(void ** state) {
 
     test_data->agent_state->uptime = 123456789;
     test_data->agent_state->recv_events_count = 12568;
-    test_data->agent_state->recv_ctrl_count = 2568;
-    test_data->agent_state->recv_states_count = 442;
     test_data->agent_state->recv_upgrade_ack_count = 5;
     test_data->agent_state->ctrl_breakdown.keepalive_count = 1234;
     test_data->agent_state->ctrl_breakdown.startup_count = 2345;
@@ -278,9 +276,12 @@ void test_rem_create_agents_state_json(void ** state) {
     cJSON* messages_received_breakdown = cJSON_GetObjectItem(messages, "received_breakdown");
 
     assert_int_equal(cJSON_GetObjectItem(messages_received_breakdown, "events")->valueint, 12568);
-    assert_int_equal(cJSON_GetObjectItem(messages_received_breakdown, "control")->valueint, 2568);
-    assert_int_equal(cJSON_GetObjectItem(messages_received_breakdown, "states")->valueint, 442);
     assert_int_equal(cJSON_GetObjectItem(messages_received_breakdown, "upgrade_ack")->valueint, 5);
+
+    // Dropped from the 4.x per-agent set: states cannot happen since 5.x discards the legacy
+    // stateful protocol, and control only restated the sum of its own breakdown.
+    assert_null(cJSON_GetObjectItem(messages_received_breakdown, "control"));
+    assert_null(cJSON_GetObjectItem(messages_received_breakdown, "states"));
 
     assert_non_null(cJSON_GetObjectItem(messages_received_breakdown, "control_breakdown"));
     cJSON* control_breakdown = cJSON_GetObjectItem(messages_received_breakdown, "control_breakdown");
