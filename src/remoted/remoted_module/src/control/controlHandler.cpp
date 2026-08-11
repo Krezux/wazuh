@@ -495,7 +495,7 @@ namespace remoted::control
                     while (!m_stopping)
                     {
                         if (m_evictionCv.wait_for(lock,
-                                                  std::chrono::seconds(kRegistryEvictionIntervalSec),
+                                                  std::chrono::seconds(m_config.registryEvictionIntervalSec),
                                                   [this]() { return m_stopping.load(); }))
                         {
                             break;

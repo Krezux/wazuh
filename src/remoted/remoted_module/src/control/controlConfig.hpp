@@ -61,6 +61,7 @@ namespace remoted::control
         uint32_t tmMaxQueueSize = kTaskMaxQueueSize;
         uint32_t keepaliveThrottleSec = kKeepaliveThrottleSec;
         uint32_t registryEvictionTtlSec = kRegistryEvictionTtlSec;
+        uint32_t registryEvictionIntervalSec = kRegistryEvictionIntervalSec;
     };
 
     Config buildControlConfig(const remoted_module_config_t& c);

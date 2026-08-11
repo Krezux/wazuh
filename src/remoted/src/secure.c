@@ -421,6 +421,16 @@ STATIC void remoted_module_control_config(remoted_module_config_t *rm_config) {
     rm_config->tm_deadline_ms = getDefine_Int_default("remoted", "control_tm_deadline", 100, 30000, 2000);
     rm_config->tm_max_queue_size = getDefine_Int_default("remoted", "control_tm_max_queue_size", 100, 1000000, 10000);
 
+    // Agent-facing cadences. These are the manager half of the agent/manager timing contract:
+    // the throttle bounds how often a notify reaches wazuh-db, and the eviction pair bounds how
+    // long a silent agent keeps its in-memory session state. Both must stay above whatever notify
+    // cadence the agent ships, which is why they are settable rather than compiled in.
+    rm_config->keepalive_throttle_sec = getDefine_Int_default("remoted", "control_keepalive_throttle", 1, 3600, 60);
+    rm_config->registry_eviction_ttl_sec =
+        getDefine_Int_default("remoted", "control_registry_eviction_ttl", 60, 604800, 21600);
+    rm_config->registry_eviction_interval_sec =
+        getDefine_Int_default("remoted", "control_registry_eviction_interval", 1, 86400, 300);
+
     extern module_limits_t manager_module_limits;
     extern bool manager_module_limits_enabled;
 

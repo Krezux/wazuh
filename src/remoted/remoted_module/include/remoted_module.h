@@ -169,6 +169,11 @@ extern "C"
         int tm_concurrency;              ///< Task Manager concurrency limit (<=0 -> 10).
         int tm_deadline_ms;              ///< Task Manager per-request deadline in milliseconds (<=0 -> 200).
         int tm_max_queue_size; ///< Task Manager request queue high-water mark; QueueFull over it (<=0 -> 10000).
+        int keepalive_throttle_sec; ///< Minimum seconds between two wazuh-db keepalive writes for the same agent;
+                                    ///< notifies arriving faster are absorbed in memory (<=0 -> 60).
+        int registry_eviction_ttl_sec;      ///< Idle seconds after which an agent's in-memory registry entry is
+                                            ///< dropped (<=0 -> 21600).
+        int registry_eviction_interval_sec; ///< Seconds between registry eviction sweeps (<=0 -> 300).
     } remoted_module_config_t;
 
     /**
