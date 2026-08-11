@@ -45,7 +45,7 @@ list(APPEND WM_EXEC_BASE_FLAGS "-Wl,--wrap,OSList_AddData -Wl,--wrap,OSList_Dele
 
 if(${TARGET} STREQUAL "winagent")
     list(APPEND tests_flags "${WM_EXEC_BASE_FLAGS} -Wl,--wrap,fim_db_init -Wl,--wrap=syscom_dispatch \
-                               -Wl,--wrap=fim_db_teardown -Wl,--wrap=Start_win32_Syscheck -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_sync_teardown")
+                               -Wl,--wrap=fim_db_teardown -Wl,--wrap=Start_win32_Syscheck -Wl,--wrap=is_fim_shutdown")
 else()
     list(APPEND tests_flags "${WM_EXEC_BASE_FLAGS} -Wl,--wrap,fork -Wl,--wrap,kill -Wl,--wrap,exit -Wl,--wrap,sleep")
 endif()

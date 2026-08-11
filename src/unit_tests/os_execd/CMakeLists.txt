@@ -41,7 +41,7 @@ if(${TARGET} STREQUAL "winagent")
     list(APPEND execd_flags "-Wl,--wrap,wpopenv -Wl,--wrap,wpclose -Wl,--wrap,fwrite \
                              -Wl,--wrap,fopen -Wl,--wrap,fclose -Wl,--wrap,fflush -Wl,--wrap,fgets -Wl,--wrap,fread -Wl,--wrap,fseek \
                              -Wl,--wrap,remove -Wl,--wrap,fgetpos -Wl,--wrap=fgetc -Wl,--wrap,fwrite -Wl,--wrap,wfopen \
-                             -Wl,--wrap=syscom_dispatch -Wl,--wrap=Start_win32_Syscheck -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_sync_teardown \
+                             -Wl,--wrap=syscom_dispatch -Wl,--wrap=Start_win32_Syscheck -Wl,--wrap=is_fim_shutdown \
                              -Wl,--wrap=_imp__dbsync_initialize -Wl,--wrap=fim_db_teardown -Wl,--wrap,w_query_agentd \
                              -Wl,--wrap,popen ${DEBUG_OP_WRAPPERS}")
 else()

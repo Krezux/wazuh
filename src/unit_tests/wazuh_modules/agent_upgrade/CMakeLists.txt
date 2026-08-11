@@ -117,7 +117,7 @@ foreach(counter RANGE ${count})
         target_link_libraries(${test_name}
             -Wl,--wrap=syscom_dispatch
             -Wl,--wrap=Start_win32_Syscheck
-            -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_sync_teardown)
+            -Wl,--wrap=is_fim_shutdown)
     endif()
 
     if(NOT test_flags STREQUAL " ")

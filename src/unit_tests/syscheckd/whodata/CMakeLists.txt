@@ -185,7 +185,7 @@ else()
                            -Wl,--wrap,fim_db_get_max_version_file -Wl,--wrap,fim_db_set_version_file \
                            -Wl,--wrap=fim_db_transaction_start -Wl,--wrap=fim_db_transaction_sync_row \
                            -Wl,--wrap=fim_db_transaction_deleted_rows,--wrap=fim_sync_push_msg -Wl,--wrap,fim_db_file_delete \
-                           -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_sync_teardown -Wl,--wrap=_imp__dbsync_initialize \
+                           -Wl,--wrap=is_fim_shutdown -Wl,--wrap=_imp__dbsync_initialize \
                            -Wl,--wrap,fim_db_close_and_delete_database -Wl,--wrap,fim_db_clean_file_table \
                            -Wl,--wrap=fim_db_teardown ${HASH_OP_WRAPPERS} \
                            -Wl,--wrap=utf8_GetNamedSecurityInfo -Wl,--wrap=utf8_SetNamedSecurityInfo \

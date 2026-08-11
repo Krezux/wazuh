@@ -44,7 +44,7 @@ set(START_AGENT_BASE_FLAGS "-Wl,--wrap,w_rotate_log -Wl,--wrap,getDefine_Int -Wl
                             -Wl,--wrap,OS_SetKeepalive -Wl,--wrap,OS_SetKeepalive_Options -Wl,--wrap,OS_SetSendTimeout \
                             -Wl,--wrap,OS_ConnectTCP -Wl,--wrap,OS_SetRecvTimeout -Wl,--wrap,OS_GetHost \
                             -Wl,--wrap,send_msg -Wl,--wrap,recv -Wl,--wrap,OS_RecvSecureTCP -Wl,--wrap,fseek \
-                            -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_sync_teardown -Wl,--wrap=fim_db_teardown \
+                            -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_db_teardown \
                             -Wl,--wrap=_imp__dbsync_initialize \
                             -Wl,--wrap,fprintf -Wl,--wrap,fflush -Wl,--wrap,ReadSecMSG -Wl,--wrap,wnet_select \
                             -Wl,--wrap,OS_SendSecureTCP -Wl,--wrap,OS_SendUDPbySize -Wl,--wrap,getpid ${DEBUG_OP_WRAPPERS} \
@@ -61,7 +61,7 @@ list(APPEND client-agent_names "test_notify")
 if(${TARGET} STREQUAL "winagent")
 list(APPEND client-agent_flags "-Wl,--wrap,OS_SendUnix,--wrap,OS_RecvUnix \
                                 -Wl,--wrap,strftime -Wl,--wrap=syscom_dispatch -Wl,--wrap=Start_win32_Syscheck \
-                                -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_sync_teardown -Wl,--wrap=fim_db_teardown \
+                                -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_db_teardown \
                                 -Wl,--wrap=_imp__dbsync_initialize \
                                 -Wl,--wrap=getsockname -Wl,--wrap,get_ipv4_string -Wl,--wrap,get_ipv6_string \
                                 -Wl,--wrap,sleep,--wrap,w_rotate_log,--wrap,getpid,--wrap,time -Wl,--wrap,w_query_agentd ${DEBUG_OP_WRAPPERS}")
@@ -79,7 +79,7 @@ if(${TARGET} STREQUAL "winagent")
                                     -Wl,--wrap,cJSON_CreateObject@0 -Wl,--wrap,cJSON_AddNumberToObject@16 \
                                     -Wl,--wrap,cJSON_AddItemToObject@12 -Wl,--wrap,cJSON_AddStringToObject@12 \
                                     -Wl,--wrap,cJSON_Delete@4 -Wl,--wrap,strftime -Wl,--wrap=syscom_dispatch \
-                                    -Wl,--wrap=Start_win32_Syscheck -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_sync_teardown -Wl,--wrap=fim_db_teardown \
+                                    -Wl,--wrap=Start_win32_Syscheck -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_db_teardown \
                                     -Wl,--wrap=_imp__dbsync_initialize \
                                     -Wl,--wrap,cJSON_PrintUnformatted@4 -Wl,--wrap,w_agentd_get_buffer_lenght \
                                     -Wl,--wrap,cJSON_AddBoolToObject@12 -Wl,--wrap,w_query_agentd -Wl,--enable-stdcall-fixup ${DEBUG_OP_WRAPPERS}")
@@ -94,7 +94,7 @@ endif()
 list(APPEND client-agent_names "test_buffer")
 if(${TARGET} STREQUAL "winagent")
 list(APPEND client-agent_flags "-Wl,--wrap,pthread_mutex_lock -Wl,--wrap,pthread_mutex_unlock -Wl,--wrap,getDefine_Int \
-                                -Wl,--wrap=syscom_dispatch -Wl,--wrap=Start_win32_Syscheck -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_sync_teardown \
+                                -Wl,--wrap=syscom_dispatch -Wl,--wrap=Start_win32_Syscheck -Wl,--wrap=is_fim_shutdown \
                                 -Wl,--wrap=fim_db_teardown -Wl,--wrap=_imp__dbsync_initialize -Wl,--wrap,w_query_agentd")
 else()
 list(APPEND client-agent_flags "-Wl,--wrap,pthread_mutex_lock -Wl,--wrap,pthread_mutex_unlock \
@@ -107,7 +107,7 @@ list(APPEND client-agent_flags "-Wl,--wrap,getClientConfig -Wl,--wrap,getBufferC
                                 -Wl,--wrap,getLabelsConfig -Wl,--wrap,getAgentInternalOptions \
                                 -Wl,--wrap,getAntiTamperingConfig -Wl,--wrap,w_agentd_state_get \
                                 -Wl,--wrap=syscom_dispatch -Wl,--wrap=Start_win32_Syscheck \
-                                -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_sync_teardown -Wl,--wrap=fim_db_teardown \
+                                -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_db_teardown \
                                 -Wl,--wrap=_imp__dbsync_initialize -Wl,--wrap=_imp__rsync_initialize")
 else()
 list(APPEND client-agent_flags "-Wl,--wrap,getClientConfig -Wl,--wrap,getBufferConfig \

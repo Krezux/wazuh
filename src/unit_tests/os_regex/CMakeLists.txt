@@ -35,7 +35,7 @@ if(${TARGET} STREQUAL "winagent")
     os_regex_flags
     "-Wl,--wrap,getSyscheckConfig -Wl,--wrap,getRootcheckConfig \
                             -Wl,--wrap,getSyscheckInternalOptions -Wl,--wrap=Start_win32_Syscheck \
-                            -Wl,--wrap,syscom_dispatch -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_sync_teardown -Wl,--wrap=_imp__dbsync_initialize \
+                            -Wl,--wrap,syscom_dispatch -Wl,--wrap=is_fim_shutdown -Wl,--wrap=_imp__dbsync_initialize \
                             -Wl,--wrap=fim_db_teardown")
 else()
   list(APPEND os_regex_flags " ")
@@ -56,7 +56,7 @@ if(${TARGET} STREQUAL "winagent")
     os_regex_flags
     "-Wl,--wrap,getSyscheckConfig -Wl,--wrap,getRootcheckConfig \
                             -Wl,--wrap,getSyscheckInternalOptions -Wl,--wrap=Start_win32_Syscheck \
-                            -Wl,--wrap,syscom_dispatch -Wl,--wrap=is_fim_shutdown -Wl,--wrap=fim_sync_teardown -Wl,--wrap=_imp__dbsync_initialize \
+                            -Wl,--wrap,syscom_dispatch -Wl,--wrap=is_fim_shutdown -Wl,--wrap=_imp__dbsync_initialize \
                             -Wl,--wrap=fim_db_teardown")
 else()
   list(APPEND os_regex_flags " ")

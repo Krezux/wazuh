@@ -197,6 +197,14 @@ EXPORTED FIMDBErrorCode fim_db_transaction_deleted_rows(TXN_HANDLE txn_handler,
 EXPORTED void fim_db_teardown();
 
 /**
+ * @brief Sets a hook to run at the start of fim_db_teardown().
+ *
+ * Used by the Windows agent to close the inventory synchronization database on the service stop
+ * path, which POSIX does from fim_shutdown_waiter().
+ */
+EXPORTED void fim_db_set_teardown_hook(void (*hook)(void));
+
+/**
  * @brief Closes the database connection and deletes the database file.
  */
 EXPORTED void fim_db_close_and_delete_database();

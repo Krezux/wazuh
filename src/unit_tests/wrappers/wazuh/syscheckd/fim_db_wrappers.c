@@ -138,10 +138,6 @@ void __wrap_fim_db_teardown() {
     function_called();
 }
 
-void __wrap_fim_sync_teardown() {
-    function_called();
-}
-
 void __wrap__imp__dbsync_initialize() {
     function_called();
 }

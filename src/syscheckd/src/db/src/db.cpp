@@ -458,8 +458,20 @@ fim_db_transaction_deleted_rows(TXN_HANDLE txn_handler, result_callback_t res_ca
     return retval;
 }
 
+static void (*g_teardown_hook)(void) = nullptr;
+
+void fim_db_set_teardown_hook(void (*hook)(void))
+{
+    g_teardown_hook = hook;
+}
+
 void fim_db_teardown()
 {
+    if (g_teardown_hook)
+    {
+        g_teardown_hook();
+    }
+
     try
     {
         DB::instance().teardown();
