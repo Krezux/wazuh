@@ -128,7 +128,7 @@ endif()
 list(APPEND shared_tests_names "test_hashmap_op")
 if(${TARGET} STREQUAL "winagent")
   list(APPEND shared_tests_flags
-       "-Wl,--wrap,syscom_dispatch -Wl,--wrap,Start_win32_Syscheck -Wl,--wrap,is_fim_shutdown -Wl,--wrap,_imp__dbsync_initialize -Wl,--wrap,fim_db_teardown")
+       "-Wl,--wrap,syscom_dispatch -Wl,--wrap,Start_win32_Syscheck -Wl,--wrap,is_fim_shutdown -Wl,--wrap,fim_sync_teardown -Wl,--wrap,_imp__dbsync_initialize -Wl,--wrap,fim_db_teardown")
 else()
   list(APPEND shared_tests_flags " ")
 endif()

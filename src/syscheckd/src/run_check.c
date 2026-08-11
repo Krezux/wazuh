@@ -142,10 +142,9 @@ void fim_sync_teardown() {
         asp_stop(syscheck.sync_handle);
     }
 
+    /* is_fim_shutdown is already set by the caller. Clearing the module flag under the lock
+     * orders it against the handle users, which take the lock for reading. */
     w_rwlock_wrlock(&fim_sync_handle_rwlock);
-    is_fim_shutdown = true;
-    /* Re-cleared under the lock: the stop can land between start_daemon()'s shutdown check and
-     * its `fim_sync_module_running = 1`, and the lock orders this clear after that section. */
     fim_sync_module_running = 0;
     sync_thread = fim_sync_thread_handle;
     fim_sync_thread_handle = NULL;
